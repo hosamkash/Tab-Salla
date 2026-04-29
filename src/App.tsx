@@ -9,6 +9,10 @@ import { ModuleHomePage } from "@/pages/ModuleHomePage";
 import { OwnersPage } from "@/pages/OwnersPage";
 import { PathsPage } from "@/pages/PathsPage";
 import { StagesPage } from "@/pages/StagesPage";
+import { StatesPage } from "@/pages/StatesPage";
+import { SectionsPage } from "@/pages/SectionsPage";
+import { SubSectionsPage } from "@/pages/SubSectionsPage";
+import { WorkOrderTypesPage } from "@/pages/WorkOrderTypesPage";
 import { VerificationItemsPage } from "@/pages/VerificationItemsPage";
 import { WorkOrderDetailsPage } from "@/pages/WorkOrderDetailsPage";
 import { WorkOrdersPage } from "@/pages/WorkOrdersPage";
@@ -45,10 +49,10 @@ function App() {
         ) : null}
         {currentPage === "design-system" ? <DesignSystemPage onNavigate={setCurrentPage} /> : null}
         {currentPage === "master-data" ? <MasterDataDashboardPage onNavigate={setCurrentPage} /> : null}
-        {currentPage === "states" ? <MasterDataDashboardPage onNavigate={setCurrentPage} /> : null}
-        {currentPage === "sections" ? <MasterDataDashboardPage onNavigate={setCurrentPage} /> : null}
-        {currentPage === "sub-sections" ? <MasterDataDashboardPage onNavigate={setCurrentPage} /> : null}
-        {currentPage === "types" ? <MasterDataDashboardPage onNavigate={setCurrentPage} /> : null}
+        {currentPage === "states" ? <StatesPage /> : null}
+        {currentPage === "sections" ? <SectionsPage /> : null}
+        {currentPage === "sub-sections" ? <SubSectionsPage /> : null}
+        {currentPage === "types" ? <WorkOrderTypesPage /> : null}
         {currentPage === "owners" ? <OwnersPage /> : null}
         {currentPage === "paths" ? <PathsPage /> : null}
         {currentPage === "stages" ? <StagesPage /> : null}
