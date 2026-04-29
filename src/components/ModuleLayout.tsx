@@ -7,7 +7,6 @@ import {
   ClipboardList,
   FolderCog,
   GitBranch,
-  Grid3X3,
   Home,
   LayoutDashboard,
   LogOut,
@@ -79,8 +78,6 @@ export function ModuleLayout({
         return <UsersRound size={14} className="item-icon owners" />;
       case "verification-items":
         return <ShieldCheck size={14} className="item-icon verification" />;
-      case "basket-definition":
-        return <Grid3X3 size={14} className="item-icon basket" />;
       default:
         return <Home size={14} className="item-icon dashboard" />;
     }

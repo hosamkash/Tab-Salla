@@ -2,7 +2,6 @@ import { useState } from "react";
 import { AlertTriangle, ArrowRight, FileText, Sparkles } from "lucide-react";
 import type { WorkOrder } from "@/models/work-order";
 import { PageIntroHeader } from "@/components/PageIntroHeader";
-import { baskets } from "@/data/work-orders-data";
 import {
   masterOwners,
   masterSections,
@@ -10,6 +9,7 @@ import {
   masterSubSections,
   masterWorkOrderTypes,
 } from "@/data/master-data";
+import { stageDefinitions } from "@/data/stages-data";
 import {
   Ctr_WorkOrderActions,
   type WorkOrderPopupType,
@@ -43,7 +43,7 @@ export function WorkOrderDetailsPage({ order, onBack }: WorkOrderDetailsPageProp
   const subSectionOptions = masterSubSections.filter((item) => item.enabled).map((item) => item.name);
   const typeOptions = masterWorkOrderTypes.filter((item) => item.enabled).map((item) => item.name);
   const ownerOptions = masterOwners.filter((item) => item.enabled).map((item) => item.name);
-  const basketOptions = baskets.filter((item) => item.enabled).map((item) => item.name);
+  const basketOptions = stageDefinitions.filter((item) => item.enabled).map((item) => item.nameAr);
   const daysRatio = Math.min((orderData.daysInBasket / orderData.slaDays) * 100, 140);
   const isOverSla = orderData.daysInBasket > orderData.slaDays;
 

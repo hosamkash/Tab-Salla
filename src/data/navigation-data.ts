@@ -15,15 +15,14 @@ export const navGroups: NavGroup[] = [
     id: "settings",
     label: "الإعدادات",
     items: [
+      { id: "stages", label: "المراحل (السلال)" },
+      { id: "paths", label: "المسارات" },
+      { id: "verification-items", label: "بنود التحقق" },
       { id: "states", label: "تعريف الحالة" },
       { id: "sections", label: "الأقسام" },
       { id: "sub-sections", label: "الأقسام الفرعية" },
       { id: "types", label: "أنواع أوامر العمل" },
       { id: "owners", label: "المسؤلين" },
-      { id: "paths", label: "المسارات" },
-      { id: "stages", label: "المراحل" },
-      { id: "verification-items", label: "بنود التحقق" },
-      { id: "basket-definition", label: "تعريف السلة" },
     ],
   },
   {
@@ -58,10 +57,6 @@ export const pageMetaMap: Record<AppPageId, PageMeta> = {
   "master-data": {
     title: "Master Data",
     description: "لوحة إعدادات التعريفات الرئيسية الخاصة بالموديول.",
-  },
-  "basket-definition": {
-    title: "تعريف السلة",
-    description: "ضبط سلال العمل وقيم SLA والتفعيل والترتيب.",
   },
   "verification-items": {
     title: "بنود التحقق والجودة",

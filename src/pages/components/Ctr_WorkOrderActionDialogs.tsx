@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Camera, ImagePlus, Search, Upload } from "lucide-react";
+import { AlertTriangle, Camera, ImagePlus, Pencil, Search, Trash2, Upload } from "lucide-react";
 import {
   baskets,
   employeeOptions,
@@ -21,6 +21,20 @@ type UploadedImage = {
   sizeLabel: string;
   previewUrl: string;
   source: "device" | "camera";
+  note: string;
+};
+
+type CompletionRequestRow = {
+  id: string;
+  requestText: string;
+  ownerName: string;
+  timestamp: string;
+};
+
+type CompletionResponseDraft = {
+  responseText: string;
+  ownerName: string;
+  timestamp: string;
 };
 
 export function Ctr_WorkOrderActionDialogs({
@@ -32,6 +46,11 @@ export function Ctr_WorkOrderActionDialogs({
   const [selectedChecklist, setSelectedChecklist] = useState<string[]>(["v1"]);
   const [forwardBasket, setForwardBasket] = useState("سلة جودة المرفقات");
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  const [completionRequests, setCompletionRequests] = useState<CompletionRequestRow[]>([]);
+  const [requestTextDraft, setRequestTextDraft] = useState("");
+  const [requestOwnerDraft, setRequestOwnerDraft] = useState(employeeOptions[0]?.name ?? "");
+  const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
+  const [responseDrafts, setResponseDrafts] = useState<Record<string, CompletionResponseDraft>>({});
   const deviceInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -67,6 +86,7 @@ export function Ctr_WorkOrderActionDialogs({
       sizeLabel: formatFileSize(file.size),
       previewUrl: URL.createObjectURL(file),
       source,
+      note: "",
     }));
     setUploadedImages((prev) => [...newItems, ...prev]);
   };
@@ -116,6 +136,7 @@ export function Ctr_WorkOrderActionDialogs({
         sizeLabel: "لقطة مباشرة",
         previewUrl: dataUrl,
         source: "camera",
+        note: "",
       },
       ...prev,
     ]);
@@ -123,6 +144,56 @@ export function Ctr_WorkOrderActionDialogs({
     if (cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
     }
+  };
+
+  const toCurrentDateTime = () => {
+    const now = new Date();
+    return now.toLocaleString("ar-SA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const addOrUpdateCompletionRequest = () => {
+    const text = requestTextDraft.trim();
+    if (!text || !requestOwnerDraft) return;
+
+    if (editingRequestId) {
+      setCompletionRequests((prev) =>
+        prev.map((row) =>
+          row.id === editingRequestId
+            ? { ...row, requestText: text, ownerName: requestOwnerDraft, timestamp: toCurrentDateTime() }
+            : row,
+        ),
+      );
+      setEditingRequestId(null);
+    } else {
+      setCompletionRequests((prev) => [
+        {
+          id: `req-${Date.now()}`,
+          requestText: text,
+          ownerName: requestOwnerDraft,
+          timestamp: toCurrentDateTime(),
+        },
+        ...prev,
+      ]);
+    }
+
+    setRequestTextDraft("");
+  };
+
+  const getResponseDraft = (requestId: string): CompletionResponseDraft => {
+    const existing = responseDrafts[requestId];
+    if (existing) return existing;
+    return {
+      responseText: "",
+      ownerName: employeeOptions[0]?.name ?? "",
+      timestamp: toCurrentDateTime(),
+    };
   };
 
   if (!activePopup) return null;
@@ -327,12 +398,82 @@ export function Ctr_WorkOrderActionDialogs({
         {activePopup === "complete-request" ? (
           <>
             <h3 className="dialog-header-title">طلب استكمال - {order.workOrderNumber}</h3>
-            <label className="field-label">نص طلب الاستكمال</label>
-            <textarea
-              className="forward-notes text-xs"
-              rows={5}
-              defaultValue="يرجى استكمال البيانات الناقصة وإعادة رفع المرفقات المطلوبة."
-            />
+            <div className="mb-2 grid gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <label className="field-label !mb-0 !text-[11px]">نص طلب الاستكمال</label>
+              <textarea
+                className="forward-notes text-xs !py-1"
+                rows={2}
+                value={requestTextDraft}
+                onChange={(event) => setRequestTextDraft(event.target.value)}
+                placeholder="اكتب نص الطلب ثم اختر المسؤول"
+              />
+              <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                <div className="grid gap-1">
+                  <label className="field-label !mb-0 !text-[11px]">المسؤول</label>
+                  <select
+                    className="h-8 rounded-md border border-border bg-white px-2 text-xs"
+                    value={requestOwnerDraft}
+                    onChange={(event) => setRequestOwnerDraft(event.target.value)}
+                  >
+                    {employeeOptions.map((employee) => (
+                      <option key={employee.id} value={employee.name}>
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button type="button" className="btn btn-primary !h-8 !px-3 !text-xs" onClick={addOrUpdateCompletionRequest}>
+                  {editingRequestId ? "تحديث" : "إضافة"}
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>الطلب</th>
+                    <th>المسؤول</th>
+                    <th>الوقت</th>
+                    <th>تعديل</th>
+                    <th>حذف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completionRequests.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.requestText}</td>
+                      <td>{row.ownerName}</td>
+                      <td>{row.timestamp}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingRequestId(row.id);
+                            setRequestTextDraft(row.requestText);
+                            setRequestOwnerDraft(row.ownerName);
+                          }}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
+                      <td>
+                        <button type="button" className="text-red-600" onClick={() => setCompletionRequests((prev) => prev.filter((item) => item.id !== row.id))}>
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {completionRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-3 text-center text-xs text-slate-500">
+                        لا توجد طلبات مضافة
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={onClose}>
                 إرسال الطلب
@@ -344,12 +485,72 @@ export function Ctr_WorkOrderActionDialogs({
         {activePopup === "complete-response" ? (
           <>
             <h3 className="dialog-header-title">الرد على الاستكمال - {order.workOrderNumber}</h3>
-            <label className="field-label">تفاصيل الرد</label>
-            <textarea
-              className="forward-notes text-xs"
-              rows={5}
-              defaultValue="تم استكمال المتطلبات وإرفاق جميع المستندات."
-            />
+            {completionRequests.length === 0 ? (
+              <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                لا توجد بنود طلب استكمال مضافة بعد.
+              </p>
+            ) : (
+              <div className="grid gap-2">
+                {completionRequests.map((request, index) => {
+                  const draft = getResponseDraft(request.id);
+                  return (
+                    <details key={request.id} className="rounded-lg border-2 border-slate-300 bg-white shadow-sm" open={index === 0}>
+                      <summary className="cursor-pointer list-none rounded-t-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                        <div className="flex items-center justify-between gap-2">
+                          <span>طلب #{index + 1}</span>
+                          <span className="text-xs font-normal text-slate-500">{request.timestamp}</span>
+                        </div>
+                        <p className="mt-1 text-xs font-normal text-slate-700">{request.requestText}</p>
+                      </summary>
+                      <div className="grid gap-1.5 border-t border-slate-300 bg-white px-3 py-2">
+                        <label className="field-label !mb-0 !text-[11px]">نص الرد</label>
+                        <textarea
+                          className="forward-notes text-xs !py-1"
+                          rows={2}
+                          value={draft.responseText}
+                          onChange={(event) =>
+                            setResponseDrafts((prev) => ({
+                              ...prev,
+                              [request.id]: { ...draft, responseText: event.target.value },
+                            }))
+                          }
+                          placeholder="اكتب الرد على هذا الطلب"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="grid gap-1">
+                            <label className="field-label !mb-0 !text-[11px]">المسؤول</label>
+                            <select
+                              className="h-8 rounded-md border border-border bg-white px-2 text-xs"
+                              value={draft.ownerName}
+                              onChange={(event) =>
+                                setResponseDrafts((prev) => ({
+                                  ...prev,
+                                  [request.id]: { ...draft, ownerName: event.target.value },
+                                }))
+                              }
+                            >
+                              {employeeOptions.map((employee) => (
+                                <option key={`${request.id}-${employee.id}`} value={employee.name}>
+                                  {employee.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="grid gap-1">
+                            <label className="field-label !mb-0 !text-[11px]">الوقت</label>
+                            <input
+                              className="h-8 rounded-md border border-border bg-slate-50 px-2 text-xs"
+                              value={draft.timestamp}
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+            )}
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={onClose}>
                 حفظ الرد
@@ -404,20 +605,6 @@ export function Ctr_WorkOrderActionDialogs({
                 </div>
               </div>
             ) : null}
-            <div className="employees-list">
-              <div className="employee-row">
-                <span>مخطط المسار.pdf</span>
-                <small>2.3 MB</small>
-              </div>
-              <div className="employee-row">
-                <span>صور الموقع قبل التنفيذ.zip</span>
-                <small>8.1 MB</small>
-              </div>
-              <div className="employee-row">
-                <span>اعتماد التصريح.jpg</span>
-                <small>1.2 MB</small>
-              </div>
-            </div>
             {uploadedImages.length > 0 ? (
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {uploadedImages.map((image) => (
@@ -430,12 +617,35 @@ export function Ctr_WorkOrderActionDialogs({
                       alt={image.name}
                       className="h-28 w-full rounded-lg object-cover"
                     />
-                    <div className="mt-2">
+                    <div className="mt-2 flex items-center justify-between gap-2">
                       <p className="line-clamp-1 text-xs font-semibold text-slate-800">{image.name}</p>
+                      <button
+                        type="button"
+                        className="text-red-600"
+                        onClick={() =>
+                          setUploadedImages((prev) => prev.filter((item) => item.id !== image.id))
+                        }
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div className="mt-2">
                       <small className="inline-flex items-center gap-1 text-[11px] text-slate-500">
                         <ImagePlus size={12} />
                         {image.sizeLabel} - {image.source === "camera" ? "من الكاميرا" : "من الجهاز"}
                       </small>
+                      <input
+                        className="mt-1 h-8 w-full rounded-md border border-border px-2 text-[11px]"
+                        placeholder="اكتب بيان الصورة هنا"
+                        value={image.note}
+                        onChange={(event) =>
+                          setUploadedImages((prev) =>
+                            prev.map((row) =>
+                              row.id === image.id ? { ...row, note: event.target.value } : row,
+                            ),
+                          )
+                        }
+                      />
                     </div>
                   </div>
                 ))}

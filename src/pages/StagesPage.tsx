@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { GitBranch, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GitBranch, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { PageIntroHeader } from "@/components/PageIntroHeader";
+import { masterOwners } from "@/data/master-data";
+import { verificationItems } from "@/data/work-orders-data";
+import { stageDefinitions } from "@/data/stages-data";
 
 type StageItem = {
   id: string;
@@ -39,23 +42,34 @@ type StageFormState = {
   enabled: boolean;
 };
 
-const initialStages: StageItem[] = [
-  { id: "s1", stageCode: "STG-001", nameAr: "استلام الطلب", nameEn: "Request Intake", subScreen: "screen-intake", pathCode: "PATH-001", nextStatus: "قيد المراجعة", mandatory: true, canSkip: false, minAttachments: 1, allowReturn: true, allowReassign: true, slaDays: 2, stageColor: "#0ea5e9", displayText: "استلام الطلب وتدقيق البيانات", enabled: true },
-  { id: "s2", stageCode: "STG-002", nameAr: "مراجعة فنية", nameEn: "Technical Review", subScreen: "screen-review", pathCode: "PATH-001", nextStatus: "جاهز للإسناد", mandatory: true, canSkip: false, minAttachments: 2, allowReturn: true, allowReassign: true, slaDays: 3, stageColor: "#6366f1", displayText: "مراجعة فنية أولية", enabled: true },
-  { id: "s3", stageCode: "STG-003", nameAr: "الإسناد", nameEn: "Assignment", subScreen: "screen-assign", pathCode: "PATH-004", nextStatus: "قيد التنفيذ", mandatory: true, canSkip: false, minAttachments: 1, allowReturn: false, allowReassign: true, slaDays: 1, stageColor: "#8b5cf6", displayText: "إسناد المهمة للمنفذ", enabled: true },
-  { id: "s4", stageCode: "STG-004", nameAr: "التنفيذ", nameEn: "Execution", subScreen: "screen-exec", pathCode: "PATH-002", nextStatus: "قيد التحقق", mandatory: true, canSkip: false, minAttachments: 3, allowReturn: true, allowReassign: false, slaDays: 5, stageColor: "#10b981", displayText: "تنفيذ أعمال المرحلة", enabled: true },
-  { id: "s5", stageCode: "STG-005", nameAr: "التحقق", nameEn: "Verification", subScreen: "screen-verify", pathCode: "PATH-008", nextStatus: "مكتمل", mandatory: true, canSkip: false, minAttachments: 2, allowReturn: true, allowReassign: true, slaDays: 2, stageColor: "#f59e0b", displayText: "التحقق من المخرجات", enabled: true },
-  { id: "s6", stageCode: "STG-006", nameAr: "الاعتماد", nameEn: "Approval", subScreen: "screen-approve", pathCode: "PATH-006", nextStatus: "معتمد", mandatory: false, canSkip: true, minAttachments: 1, allowReturn: true, allowReassign: false, slaDays: 1, stageColor: "#ef4444", displayText: "اعتماد نتائج المرحلة", enabled: true },
-  { id: "s7", stageCode: "STG-007", nameAr: "مساندة فنية", nameEn: "Technical Support", subScreen: "screen-support", pathCode: "PATH-009", nextStatus: "قيد التنفيذ", mandatory: false, canSkip: true, minAttachments: 0, allowReturn: false, allowReassign: true, slaDays: 2, stageColor: "#14b8a6", displayText: "دعم فني عند الحاجة", enabled: false },
-  { id: "s8", stageCode: "STG-008", nameAr: "تحديث GIS", nameEn: "GIS Update", subScreen: "screen-gis", pathCode: "PATH-007", nextStatus: "قيد المراجعة", mandatory: false, canSkip: true, minAttachments: 1, allowReturn: true, allowReassign: false, slaDays: 2, stageColor: "#22c55e", displayText: "تحديث بيانات GIS", enabled: false },
-  { id: "s9", stageCode: "STG-009", nameAr: "المستخلصات", nameEn: "Invoices", subScreen: "screen-invoice", pathCode: "PATH-010", nextStatus: "مغلق ماليًا", mandatory: true, canSkip: false, minAttachments: 2, allowReturn: true, allowReassign: false, slaDays: 4, stageColor: "#3b82f6", displayText: "استكمال الإجراءات المالية", enabled: true },
-  { id: "s10", stageCode: "STG-010", nameAr: "إغلاق الطلب", nameEn: "Closure", subScreen: "screen-close", pathCode: "PATH-001", nextStatus: "مغلق", mandatory: true, canSkip: false, minAttachments: 1, allowReturn: false, allowReassign: false, slaDays: 1, stageColor: "#64748b", displayText: "إغلاق أمر العمل نهائيًا", enabled: true },
-];
+type StageUserRow = {
+  id: string;
+  userCode: string;
+  userName: string;
+  isDefault: boolean;
+};
+
+type StageChecklistRow = {
+  id: string;
+  itemCode: string;
+  nameAr: string;
+  nameEn: string;
+  mandatory: boolean;
+  sortOrder: number;
+  enabled: boolean;
+};
+
+const initialStages: StageItem[] = stageDefinitions;
 
 export function StagesPage() {
+  const [stageScreenTab, setStageScreenTab] = useState<"stage" | "users" | "checklist">("stage");
   const [stagesState, setStagesState] = useState<StageItem[]>(initialStages);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedUserCode, setSelectedUserCode] = useState("");
+  const [selectedChecklistCode, setSelectedChecklistCode] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [stageUsers, setStageUsers] = useState<StageUserRow[]>([]);
+  const [stageChecklist, setStageChecklist] = useState<StageChecklistRow[]>([]);
   const [formState, setFormState] = useState<StageFormState>({
     stageCode: "",
     nameAr: "",
@@ -149,6 +163,28 @@ export function StagesPage() {
     resetForm();
   };
 
+  const filteredOwnerOptions = masterOwners.filter((owner) => owner.enabled);
+
+  const checklistSource = verificationItems.map((item, index) => ({
+    id: item.id,
+    itemCode: `CHK-${String(index + 1).padStart(3, "0")}`,
+    nameAr: item.title,
+    nameEn: `Checklist Item ${index + 1}`,
+    mandatory: item.mandatory,
+    sortOrder: item.sortOrder,
+    enabled: true,
+  }));
+
+  const filteredChecklistOptions = checklistSource;
+
+  const moveRow = <T,>(rows: T[], index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= rows.length) return rows;
+    const next = [...rows];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    return next;
+  };
+
   return (
     <div className="generic-page">
       <PageIntroHeader
@@ -159,6 +195,7 @@ export function StagesPage() {
           <button
             className="btn btn-primary inline-flex items-center gap-2"
             onClick={() => {
+              setStageScreenTab("stage");
               setEditingId(null);
               resetForm();
               setIsDialogOpen(true);
@@ -170,6 +207,7 @@ export function StagesPage() {
         }
       />
 
+      {/* قائمة المراحل */}
       <section className="table-card card-surface">
         <table>
           <thead>
@@ -210,6 +248,7 @@ export function StagesPage() {
                     <button
                       title="تعديل"
                       onClick={() => {
+                        setStageScreenTab("stage");
                         setEditingId(stage.id);
                         setFormState({
                           stageCode: stage.stageCode,
@@ -250,6 +289,7 @@ export function StagesPage() {
         </table>
       </section>
 
+      {/* المرحلة */}
       {isDialogOpen ? (
         <div className="modal-backdrop" onClick={() => setIsDialogOpen(false)}>
           <div className="modal card-surface max-w-3xl overflow-hidden !p-0" onClick={(event) => event.stopPropagation()}>
@@ -259,23 +299,249 @@ export function StagesPage() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 p-3 md:gap-2.5 md:p-2">
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">كود المرحلة</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.stageCode} onChange={(event) => setFormState((prev) => ({ ...prev, stageCode: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">اسم المرحلة عربي</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.nameAr} onChange={(event) => setFormState((prev) => ({ ...prev, nameAr: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">اسم المرحلة الإنجليزي</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.nameEn} onChange={(event) => setFormState((prev) => ({ ...prev, nameEn: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">الشاشة الفرعية</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.subScreen} onChange={(event) => setFormState((prev) => ({ ...prev, subScreen: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">كود المسار</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.pathCode} onChange={(event) => setFormState((prev) => ({ ...prev, pathCode: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">الحالة التالية</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.nextStatus} onChange={(event) => setFormState((prev) => ({ ...prev, nextStatus: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">إلزامية</label><input type="checkbox" className="h-4 w-4" checked={formState.mandatory} onChange={(event) => setFormState((prev) => ({ ...prev, mandatory: event.target.checked }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">يمكن تخطيها</label><input type="checkbox" className="h-4 w-4" checked={formState.canSkip} onChange={(event) => setFormState((prev) => ({ ...prev, canSkip: event.target.checked }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">الحد الأدنى لعدد المرفقات</label><input type="number" className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.minAttachments} onChange={(event) => setFormState((prev) => ({ ...prev, minAttachments: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">تسمح بالإرجاع</label><input type="checkbox" className="h-4 w-4" checked={formState.allowReturn} onChange={(event) => setFormState((prev) => ({ ...prev, allowReturn: event.target.checked }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">تسمح بإعادة الإسناد</label><input type="checkbox" className="h-4 w-4" checked={formState.allowReassign} onChange={(event) => setFormState((prev) => ({ ...prev, allowReassign: event.target.checked }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">عدد أيام SLA</label><input type="number" className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.slaDays} onChange={(event) => setFormState((prev) => ({ ...prev, slaDays: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">لون المرحلة</label><input type="color" className="h-8 rounded-md border border-border px-1.5" value={formState.stageColor} onChange={(event) => setFormState((prev) => ({ ...prev, stageColor: event.target.value }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">تفعيل</label><input type="checkbox" className="h-4 w-4" checked={formState.enabled} onChange={(event) => setFormState((prev) => ({ ...prev, enabled: event.target.checked }))} /></div>
-              <div className="flex flex-col gap-1 text-xs text-slate-600 col-span-2"><label className="field-label gap-1 text-xs text-slate-600">جملة العرض</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.displayText} onChange={(event) => setFormState((prev) => ({ ...prev, displayText: event.target.value }))} /></div>
+            <div className="grid grid-cols-3 gap-2 border-b border-slate-200 bg-slate-50 p-2">
+              <button className={stageScreenTab === "stage" ? "btn btn-primary !h-8 !text-xs" : "btn btn-secondary !h-8 !text-xs"} onClick={() => setStageScreenTab("stage")}>بيانات المرحلة</button>
+              <button className={stageScreenTab === "users" ? "btn btn-primary !h-8 !text-xs" : "btn btn-secondary !h-8 !text-xs"} onClick={() => setStageScreenTab("users")}>المستخدمين</button>
+              <button className={stageScreenTab === "checklist" ? "btn btn-primary !h-8 !text-xs" : "btn btn-secondary !h-8 !text-xs"} onClick={() => setStageScreenTab("checklist")}>قائمة التحقق</button>
             </div>
+
+            {stageScreenTab === "stage" ? (
+              <div className="grid grid-cols-2 gap-2 p-3 md:gap-2.5 md:p-2">
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">كود المرحلة</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.stageCode} onChange={(event) => setFormState((prev) => ({ ...prev, stageCode: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">اسم المرحلة عربي</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.nameAr} onChange={(event) => setFormState((prev) => ({ ...prev, nameAr: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">اسم المرحلة الإنجليزي</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.nameEn} onChange={(event) => setFormState((prev) => ({ ...prev, nameEn: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">الشاشة الفرعية</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.subScreen} onChange={(event) => setFormState((prev) => ({ ...prev, subScreen: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">كود المسار</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.pathCode} onChange={(event) => setFormState((prev) => ({ ...prev, pathCode: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">الحالة التالية</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.nextStatus} onChange={(event) => setFormState((prev) => ({ ...prev, nextStatus: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">إلزامية</label><input type="checkbox" className="h-4 w-4" checked={formState.mandatory} onChange={(event) => setFormState((prev) => ({ ...prev, mandatory: event.target.checked }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">يمكن تخطيها</label><input type="checkbox" className="h-4 w-4" checked={formState.canSkip} onChange={(event) => setFormState((prev) => ({ ...prev, canSkip: event.target.checked }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">الحد الأدنى لعدد المرفقات</label><input type="number" className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.minAttachments} onChange={(event) => setFormState((prev) => ({ ...prev, minAttachments: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">تسمح بالإرجاع</label><input type="checkbox" className="h-4 w-4" checked={formState.allowReturn} onChange={(event) => setFormState((prev) => ({ ...prev, allowReturn: event.target.checked }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">تسمح بإعادة الإسناد</label><input type="checkbox" className="h-4 w-4" checked={formState.allowReassign} onChange={(event) => setFormState((prev) => ({ ...prev, allowReassign: event.target.checked }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">عدد أيام SLA</label><input type="number" className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.slaDays} onChange={(event) => setFormState((prev) => ({ ...prev, slaDays: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">لون المرحلة</label><input type="color" className="h-8 rounded-md border border-border px-1.5" value={formState.stageColor} onChange={(event) => setFormState((prev) => ({ ...prev, stageColor: event.target.value }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600"><label className="field-label gap-1 text-xs text-slate-600">تفعيل</label><input type="checkbox" className="h-4 w-4" checked={formState.enabled} onChange={(event) => setFormState((prev) => ({ ...prev, enabled: event.target.checked }))} /></div>
+                <div className="flex flex-col gap-1 text-xs text-slate-600 col-span-2"><label className="field-label gap-1 text-xs text-slate-600">جملة العرض</label><input className="h-8 rounded-md border border-border px-2.5 text-xs" value={formState.displayText} onChange={(event) => setFormState((prev) => ({ ...prev, displayText: event.target.value }))} /></div>
+              </div>
+            ) : null}
+
+            {stageScreenTab === "users" ? (
+              <div className="max-h-[45vh] overflow-y-auto px-3 py-2">
+                <section className="table-card card-surface">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">المستخدمين</h3>
+                    <select
+                      className="h-8 min-w-[220px] rounded-md border border-border bg-white px-2.5 text-xs"
+                      value={selectedUserCode}
+                      onChange={(event) => {
+                        const code = event.target.value;
+                        setSelectedUserCode(code);
+                        if (!code) return;
+                        const owner = filteredOwnerOptions.find((item) => item.employeeCode === code);
+                        if (!owner) return;
+                        setStageUsers((prev) => {
+                          if (prev.some((row) => row.userCode === owner.employeeCode)) return prev;
+                          return [
+                            ...prev,
+                            {
+                              id: `u-${Date.now()}-${owner.id}`,
+                              userCode: owner.employeeCode,
+                              userName: owner.name,
+                              isDefault: prev.length === 0,
+                            },
+                          ];
+                        });
+                        setSelectedUserCode("");
+                      }}
+                    >
+                      <option value="">اختيار مستخدم للإضافة</option>
+                      {filteredOwnerOptions.map((owner) => (
+                        <option key={owner.id} value={owner.employeeCode}>
+                          {owner.employeeCode} - {owner.name}
+                        </option>
+                      ))}
+                    </select>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>كود المستخدم</th>
+                      <th>اسم المستخدم</th>
+                      <th>افتراضي</th>
+                      <th>حذف</th>
+                      <th>إعادة ترتيب الصفوف</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stageUsers.map((user, index) => (
+                      <tr key={user.id}>
+                        <td>{user.userCode}</td>
+                        <td>{user.userName}</td>
+                        <td>
+                          <input
+                            type="radio"
+                            name="default-user"
+                            checked={user.isDefault}
+                            onChange={() =>
+                              setStageUsers((prev) =>
+                                prev.map((row) => ({ ...row, isDefault: row.id === user.id })),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className="text-red-600"
+                            onClick={() => setStageUsers((prev) => prev.filter((row) => row.id !== user.id))}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                        <td>
+                          <div className="inline-flex items-center gap-1">
+                            <GripVertical size={14} className="text-slate-400" />
+                            <button onClick={() => setStageUsers((prev) => moveRow(prev, index, "up"))}>
+                              <ArrowUp size={13} />
+                            </button>
+                            <button onClick={() => setStageUsers((prev) => moveRow(prev, index, "down"))}>
+                              <ArrowDown size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {stageUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-4 text-center text-xs text-slate-500">
+                          لا يوجد مستخدمين مضافين
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+                </section>
+              </div>
+            ) : null}
+
+            {stageScreenTab === "checklist" ? (
+              <div className="max-h-[45vh] overflow-y-auto px-3 py-2">
+                <section className="table-card card-surface">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">قائمة التحقق</h3>
+                    <select
+                      className="h-8 min-w-[260px] rounded-md border border-border bg-white px-2.5 text-xs"
+                      value={selectedChecklistCode}
+                      onChange={(event) => {
+                        const code = event.target.value;
+                        setSelectedChecklistCode(code);
+                        if (!code) return;
+                        const item = filteredChecklistOptions.find((row) => row.itemCode === code);
+                        if (!item) return;
+                        setStageChecklist((prev) => {
+                          if (prev.some((row) => row.itemCode === item.itemCode)) return prev;
+                          return [
+                            ...prev,
+                            {
+                              id: `c-${Date.now()}-${item.id}`,
+                              itemCode: item.itemCode,
+                              nameAr: item.nameAr,
+                              nameEn: item.nameEn,
+                              mandatory: item.mandatory,
+                              sortOrder: prev.length + 1,
+                              enabled: true,
+                            },
+                          ];
+                        });
+                        setSelectedChecklistCode("");
+                      }}
+                    >
+                      <option value="">اختيار بند للإضافة</option>
+                      {filteredChecklistOptions.map((item) => (
+                        <option key={item.id} value={item.itemCode}>
+                          {item.itemCode} - {item.nameAr}
+                        </option>
+                      ))}
+                    </select>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>كود البند</th>
+                      <th>اسم البند عربي</th>
+                      <th>اسم البند إنجليزي</th>
+                      <th>إلزامي</th>
+                      <th>الترتيب</th>
+                      <th>فعال</th>
+                      <th>حذف</th>
+                      <th>إعادة ترتيب الصفوف</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stageChecklist.map((item, index) => (
+                      <tr key={item.id}>
+                        <td>{item.itemCode}</td>
+                        <td>{item.nameAr}</td>
+                        <td>{item.nameEn}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={item.mandatory}
+                            onChange={(event) =>
+                              setStageChecklist((prev) =>
+                                prev.map((row) =>
+                                  row.id === item.id ? { ...row, mandatory: event.target.checked } : row,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>{item.sortOrder}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={item.enabled}
+                            onChange={(event) =>
+                              setStageChecklist((prev) =>
+                                prev.map((row) =>
+                                  row.id === item.id ? { ...row, enabled: event.target.checked } : row,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className="text-red-600"
+                            onClick={() => setStageChecklist((prev) => prev.filter((row) => row.id !== item.id))}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                        <td>
+                          <div className="inline-flex items-center gap-1">
+                            <GripVertical size={14} className="text-slate-400" />
+                            <button onClick={() => setStageChecklist((prev) => moveRow(prev, index, "up"))}>
+                              <ArrowUp size={13} />
+                            </button>
+                            <button onClick={() => setStageChecklist((prev) => moveRow(prev, index, "down"))}>
+                              <ArrowDown size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {stageChecklist.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-4 text-center text-xs text-slate-500">
+                          لا توجد بنود مضافة
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+                </section>
+              </div>
+            ) : null}
 
             <div className="modal-footer !mt-0 border-t border-slate-200 px-4 py-2.5">
               <button className="btn btn-secondary !h-8 !px-3 !text-xs" onClick={() => setIsDialogOpen(false)}>
@@ -288,6 +554,7 @@ export function StagesPage() {
           </div>
         </div>
       ) : null}
+
     </div>
   );
 }

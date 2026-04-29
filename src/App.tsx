@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ModuleLayout } from "@/components/ModuleLayout";
 import { pageMetaMap } from "@/data/navigation-data";
 import type { AppPageId } from "@/models/navigation";
-import { BasketDefinitionPage } from "@/pages/BasketDefinitionPage";
 import { DesignSystemPage } from "@/pages/DesignSystemPage";
 import { MasterDataDashboardPage } from "@/pages/MasterDataDashboardPage";
 import { ModuleHomePage } from "@/pages/ModuleHomePage";
@@ -56,7 +55,6 @@ function App() {
         {currentPage === "owners" ? <OwnersPage /> : null}
         {currentPage === "paths" ? <PathsPage /> : null}
         {currentPage === "stages" ? <StagesPage /> : null}
-        {currentPage === "basket-definition" ? <BasketDefinitionPage /> : null}
         {currentPage === "verification-items" ? <VerificationItemsPage /> : null}
       </section>
     </ModuleLayout>

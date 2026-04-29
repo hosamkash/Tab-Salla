@@ -155,13 +155,14 @@ export function VerificationItemsPage() {
       />
 
       <section className="filters-bar card-surface">
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-5xl">
+          <label className="mb-1 block text-xs font-semibold text-slate-600">المرحلة (السلة)</label>
           <CtrDropdownSearch
             data={basketOptions}
             value={basketFilter}
             onValueChange={setBasketFilter}
-            placeholder="اختر السلة"
-            searchPlaceholder="ابحث عن سلة"
+            placeholder="اختر المرحلة (السلة)"
+            searchPlaceholder="ابحث عن مرحلة (سلة)"
             width="100%"
             matchTriggerWidth
             triggerClassName="h-11"
