@@ -42,6 +42,14 @@ export function ModuleLayout({
 }: ModuleLayoutProps) {
   const fixedHeaderMeta = pageMetaMap["module-home"];
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [openNavGroups, setOpenNavGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      navGroups.map((group) => [
+        group.id,
+        group.id === "workflows" || group.items.some((item) => item.id === currentPage),
+      ]),
+    ),
+  );
   const getGroupIcon = (groupId: string) => {
     if (groupId === "settings")
       return <Settings2 size={14} className="group-icon settings" />;
@@ -146,8 +154,8 @@ export function ModuleLayout({
             <button
               className={
                 currentPage === dashboardNavItem.id
-                  ? "nav-item active"
-                  : "nav-item"
+                  ? "nav-item dashboard-nav-item active"
+                  : "nav-item dashboard-nav-item"
               }
               onClick={() => onNavigate(dashboardNavItem.id)}
               type="button"
@@ -160,7 +168,11 @@ export function ModuleLayout({
               <details
                 key={group.id}
                 className="nav-group"
-                open={group.items.some((item) => item.id === currentPage)}
+                open={openNavGroups[group.id]}
+                onToggle={(event) => {
+                  const isOpen = (event.currentTarget as HTMLDetailsElement).open;
+                  setOpenNavGroups((prev) => ({ ...prev, [group.id]: isOpen }));
+                }}
               >
                 <summary>
                   <span className="nav-group-title">

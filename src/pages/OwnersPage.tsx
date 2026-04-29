@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pencil, Plus, Trash2, UsersRound } from "lucide-react";
 import { PageIntroHeader } from "@/components/PageIntroHeader";
+import { masterOwners } from "@/data/master-data";
 
 type OwnerItem = {
   id: string;
@@ -23,18 +24,7 @@ type OwnerFormState = {
   enabled: boolean;
 };
 
-const initialOwners: OwnerItem[] = [
-  { id: "o1", employeeCode: "EMP-001", name: "أحمد سمير", jobTitle: "مهندس تشغيل", department: "تشغيل", mobile: "0501000001", email: "ahmed.s@tab.com", enabled: true },
-  { id: "o2", employeeCode: "EMP-002", name: "محمد ياسر", jobTitle: "مسؤول متابعة", department: "مشاريع", mobile: "0501000002", email: "mohamed.y@tab.com", enabled: true },
-  { id: "o3", employeeCode: "EMP-003", name: "سارة أشرف", jobTitle: "مراجع جودة", department: "جودة", mobile: "0501000003", email: "sara.a@tab.com", enabled: true },
-  { id: "o4", employeeCode: "EMP-004", name: "خالد هشام", jobTitle: "مشرف مشاريع", department: "مشاريع", mobile: "0501000004", email: "khaled.h@tab.com", enabled: true },
-  { id: "o5", employeeCode: "EMP-005", name: "ناصر العتيبي", jobTitle: "فني ميداني", department: "تشغيل", mobile: "0501000005", email: "nasser.a@tab.com", enabled: true },
-  { id: "o6", employeeCode: "EMP-006", name: "رامي الصالح", jobTitle: "مهندس محطات", department: "مشاريع", mobile: "0501000006", email: "rami.s@tab.com", enabled: false },
-  { id: "o7", employeeCode: "EMP-007", name: "مها الزهراني", jobTitle: "مدقق جودة", department: "جودة", mobile: "0501000007", email: "maha.z@tab.com", enabled: true },
-  { id: "o8", employeeCode: "EMP-008", name: "وليد الحربي", jobTitle: "منسق إسناد", department: "تشغيل", mobile: "0501000008", email: "waleed.h@tab.com", enabled: true },
-  { id: "o9", employeeCode: "EMP-009", name: "دعاء مصطفى", jobTitle: "مراجع مستندات", department: "جودة", mobile: "0501000009", email: "doaa.m@tab.com", enabled: false },
-  { id: "o10", employeeCode: "EMP-010", name: "هاني بدوي", jobTitle: "مشرف عمليات", department: "تشغيل", mobile: "0501000010", email: "hani.b@tab.com", enabled: true },
-];
+const initialOwners: OwnerItem[] = masterOwners;
 
 export function OwnersPage() {
   const [ownersState, setOwnersState] = useState<OwnerItem[]>(initialOwners);

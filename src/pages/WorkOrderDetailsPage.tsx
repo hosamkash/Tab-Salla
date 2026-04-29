@@ -1,6 +1,20 @@
-import { ArrowRight, FileText, MessageSquare, RefreshCcw, Route, UserCheck } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, ArrowRight, FileText, Sparkles } from "lucide-react";
 import type { WorkOrder } from "@/models/work-order";
 import { PageIntroHeader } from "@/components/PageIntroHeader";
+import { baskets } from "@/data/work-orders-data";
+import {
+  masterOwners,
+  masterSections,
+  masterStates,
+  masterSubSections,
+  masterWorkOrderTypes,
+} from "@/data/master-data";
+import {
+  Ctr_WorkOrderActions,
+  type WorkOrderPopupType,
+} from "@/pages/components/Ctr_WorkOrderActions";
+import { Ctr_WorkOrderActionDialogs } from "@/pages/components/Ctr_WorkOrderActionDialogs";
 
 interface WorkOrderDetailsPageProps {
   order: WorkOrder | null;
@@ -8,6 +22,7 @@ interface WorkOrderDetailsPageProps {
 }
 
 export function WorkOrderDetailsPage({ order, onBack }: WorkOrderDetailsPageProps) {
+  const [activePopup, setActivePopup] = useState<WorkOrderPopupType>(null);
   const isCreateMode = !order;
   const orderData: WorkOrder = order ?? {
     id: "new-order",
@@ -22,6 +37,33 @@ export function WorkOrderDetailsPage({ order, onBack }: WorkOrderDetailsPageProp
     value: 0,
     daysInBasket: 0,
     slaDays: 7,
+  };
+  const statusOptions = masterStates.filter((item) => item.enabled).map((item) => item.name);
+  const sectionOptions = masterSections.filter((item) => item.enabled).map((item) => item.name);
+  const subSectionOptions = masterSubSections.filter((item) => item.enabled).map((item) => item.name);
+  const typeOptions = masterWorkOrderTypes.filter((item) => item.enabled).map((item) => item.name);
+  const ownerOptions = masterOwners.filter((item) => item.enabled).map((item) => item.name);
+  const basketOptions = baskets.filter((item) => item.enabled).map((item) => item.name);
+  const daysRatio = Math.min((orderData.daysInBasket / orderData.slaDays) * 100, 140);
+  const isOverSla = orderData.daysInBasket > orderData.slaDays;
+
+  const renderCombo = (label: string, defaultValue: string, options: string[]) => {
+    const uniqueOptions = options.includes(defaultValue) ? options : [defaultValue, ...options];
+    return (
+      <label>
+        <span className="mb-1 block text-xs text-slate-500">{label}</span>
+        <select
+          className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          defaultValue={defaultValue}
+        >
+          {uniqueOptions.map((option) => (
+            <option key={`${label}-${option}`} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
   };
 
   return (
@@ -55,81 +97,85 @@ export function WorkOrderDetailsPage({ order, onBack }: WorkOrderDetailsPageProp
             </label>
             <label>
               <span className="mb-1 block text-xs text-slate-500">الحالة</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.status} />
+              <select className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.status}>
+                {(statusOptions.includes(orderData.status) ? statusOptions : [orderData.status, ...statusOptions]).map((option) => (
+                  <option key={`status-${option}`} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
-              <span className="mb-1 block text-xs text-slate-500">تاريخ الحالة</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.createdAt} />
+              <span className="mb-1 block text-xs text-slate-500">تاريخ أمر العمل</span>
+              <input type="date" className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.createdAt} />
             </label>
             <label>
               <span className="mb-1 block text-xs text-slate-500">تاريخ الانتهاء</span>
               <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue="2026-05-05" />
             </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">القسم الرئيسي</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.section} />
-            </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">القسم الفرعي</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue="أعمال ميدانية" />
-            </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">النوع</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.type} />
-            </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">المسؤول</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.ownerName} />
-            </label>
+            {renderCombo("القسم الرئيسي", orderData.section, sectionOptions)}
+            {renderCombo("القسم الفرعي", "تنفيذ مدني", subSectionOptions)}
+            {renderCombo("النوع", orderData.type, typeOptions)}
+            {renderCombo("المسؤول", orderData.ownerName, ownerOptions)}
             <label>
               <span className="mb-1 block text-xs text-slate-500">قيمة أمر العمل</span>
               <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.value.toLocaleString("en-US")} />
             </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">الاستشاري</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue="الاستشاري الهندسي" />
-            </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">السلة الحالية</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={orderData.currentBasket} />
-            </label>
-            <label>
-              <span className="mb-1 block text-xs text-slate-500">أيام التواجد بالسلة</span>
-              <input className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" defaultValue={`${orderData.daysInBasket} / ${orderData.slaDays}`} />
-            </label>
+            {renderCombo("السلة الحالية", orderData.currentBasket, basketOptions)}
+            <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-rose-50 to-indigo-50 p-3 shadow-sm md:col-span-2">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                  <Sparkles size={14} className="text-amber-500" />
+                  أيام التواجد بالسلة
+                </span>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${isOverSla ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                  {isOverSla ? <AlertTriangle size={12} /> : <Sparkles size={12} />}
+                  {isOverSla ? "تجاوز SLA" : "ضمن SLA"}
+                </span>
+              </div>
+              <div className="mb-2 flex items-end justify-between">
+                <p className="text-2xl font-bold text-slate-900">
+                  {orderData.daysInBasket}
+                  <span className="mr-1 text-sm font-medium text-slate-500">يوم</span>
+                </p>
+                <p className="text-xs text-slate-600">المسموح: {orderData.slaDays} أيام</p>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/80">
+                <div
+                  className={`h-full rounded-full transition-all ${isOverSla ? "bg-gradient-to-r from-rose-500 to-orange-500" : "bg-gradient-to-r from-emerald-500 to-indigo-500"}`}
+                  style={{ width: `${daysRatio}%` }}
+                />
+              </div>
+            </div>
           </div>
         </article>
 
-        <article className="card-surface rounded-2xl p-4">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">الإجراءات التفصيلية</h3>
-          <div className="grid gap-2">
-            <button type="button" className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm">
-              <Route size={16} />
-              <span>سجل التحركات</span>
-            </button>
-            <button type="button" className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm">
-              <UserCheck size={16} />
-              <span>إعادة إسناد</span>
-            </button>
-            <button type="button" className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm">
-              <RefreshCcw size={16} />
-              <span>طلب استكمال</span>
-            </button>
-            <button type="button" className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm">
-              <RefreshCcw size={16} />
-              <span>الرد على الاستكمال</span>
-            </button>
-            <button type="button" className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm">
-              <FileText size={16} />
-              <span>قائمة المرفقات</span>
-            </button>
-            <button type="button" className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm">
-              <MessageSquare size={16} />
-              <span>ملاحظات</span>
+        <article className="rounded-2xl border border-rose-100 bg-[linear-gradient(155deg,#fff7f8_0%,#ffeef1_45%,#fff9f6_100%)] p-4 shadow-[0_14px_28px_-18px_rgba(190,24,93,0.35)]">
+          <div className="mb-4 rounded-xl border border-rose-100/80 bg-white/80 px-3 py-2.5 backdrop-blur">
+            <p className="text-[11px] font-semibold tracking-wide text-rose-500">WORK ORDER ACTIONS</p>
+            <h3 className="mt-0.5 text-base font-bold text-slate-900">الإجراءات التفصيلية</h3>
+          </div>
+          <div className="grid gap-1">
+            <Ctr_WorkOrderActions
+              variant="card"
+              onActionClick={(action) => setActivePopup(action)}
+            />
+            <button
+              type="button"
+              className="inline-flex w-full items-center gap-0 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-gradient-to-r hover:from-rose-100 hover:to-orange-100 hover:shadow-[0_10px_18px_-12px_rgba(225,29,72,0.8)]"
+              onClick={() => setActivePopup("details")}
+            >
+              <FileText size={15} />
+              <span>عرض التفاصيل المختصرة</span>
             </button>
           </div>
         </article>
       </section>
+      <Ctr_WorkOrderActionDialogs
+        activePopup={activePopup}
+        order={orderData}
+        onClose={() => setActivePopup(null)}
+      />
     </div>
   );
 }
