@@ -38,8 +38,8 @@ export const navGroups: NavGroup[] = [
 
 export const pageMetaMap: Record<AppPageId, PageMeta> = {
   "module-home": {
-    title: "نظام إدارة سلات أوامر العمل",
-    description: "الموديول لعرض الشاشات الأساسية ومتابعة آخر النشاط.",
+    title: "Tab Salla",
+    description: "منصة إدارة سلال أوامر العمل ومتابعة التشغيل.",
   },
   "work-orders": {
     title: "شاشة أوامر العمل",

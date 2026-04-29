@@ -19,7 +19,7 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import logoPath from "../../docs/Logo.png";
+const logoPath = "/Logo.png";
 import {
   dashboardNavItem,
   navGroups,
@@ -108,7 +108,7 @@ export function ModuleLayout({
               {fixedHeaderMeta.description}
             </p>
           </div>
-          <img src={logoPath} alt="TAB ERP" className="topbar-logo-icon" />
+          <img src={logoPath} alt="Tab Salla" className="topbar-logo-icon" />
         </div>
 
         {/* بيانات المستخدم */}
@@ -148,7 +148,7 @@ export function ModuleLayout({
             >
               {isSidebarCollapsed ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
             </button>
-            <img src={logoPath} alt="TAB ERP" className="brand-logo size-8" />
+            <img src={logoPath} alt="Tab Salla" className="brand-logo size-8" />
           </div>
           <nav>
             <button
