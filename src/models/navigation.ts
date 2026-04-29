@@ -4,7 +4,6 @@ export type AppPageId =
   | "work-order-details"
   | "design-system"
   | "master-data"
-  | "basket-definition"
   | "verification-items"
   | "states"
   | "sections"

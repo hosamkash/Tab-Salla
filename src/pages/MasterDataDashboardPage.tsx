@@ -14,7 +14,7 @@ interface MasterDataDashboardPageProps {
 }
 
 const cards: { id: AppPageId; title: string; description: string; icon: typeof Layers }[] = [
-  { id: "basket-definition", title: "تعريف السلة", description: "إدارة سلال دورة أمر العمل", icon: Layers },
+  { id: "stages", title: "المراحل (الأساسية)", description: "إدارة المراحل وتشمل إعدادات السلال", icon: Layers },
   { id: "states", title: "تعريف الحالة", description: "إعداد حالات سير الطلب", icon: BadgeCheck },
   { id: "sections", title: "الأقسام", description: "تعريف الأقسام الرئيسية", icon: Building2 },
   { id: "sub-sections", title: "الأقسام الفرعية", description: "ربط الأقسام بمسارات العمل", icon: Network },

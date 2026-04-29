@@ -4,53 +4,86 @@ import {
   TrendingUp
 } from "lucide-react";
 import type { AppPageId } from "@/models/navigation";
+import { baskets, verificationItems, workOrders } from "@/data/work-orders-data";
+import { stageDefinitions } from "@/data/stages-data";
 
 interface ModuleHomePageProps {
   onNavigate: (pageId: AppPageId) => void;
 }
 
 const recentActivity = [
-  { action: "تم تحديث بنود التحقق لسلة التنفيذ", time: "منذ ساعة", type: "تحديث" },
-  { action: "إضافة سلة جديدة (المساندة الفنية)", time: "منذ 3 ساعات", type: "إضافة" },
-  { action: "تعديل SLA لسلة التصاريح", time: "منذ 6 ساعات", type: "تحديث" },
-  { action: "إعادة إسناد أمر عمل WO-2026-1031", time: "منذ يوم", type: "تشغيل" },
+  { action: "تحديث بيانات المراحل والسلال", time: "اليوم", type: "إعدادات" },
+  { action: "إضافة بنود تحقق جديدة", time: "اليوم", type: "جودة" },
+  { action: "مراجعة أوامر متأخرة SLA", time: "اليوم", type: "متابعة" },
+  { action: "إعادة إسناد أمر عمل", time: "اليوم", type: "تشغيل" },
 ];
 
-const topKpis = [
-  { label: "إجمالي أوامر العمل", value: "1,061", delta: "+14.61%", tone: "blue" },
-  { label: "أوامر جديدة", value: "10,719", delta: "+11.21%", tone: "teal" },
-  { label: "قيمة الأعمال", value: "192.13M", delta: "+4.43%", tone: "green" },
-  { label: "رضا المستفيد", value: "93.13%", delta: "+6.12%", tone: "amber" },
-];
-
-const sectionShares = [
-  { label: "مشاريع", value: 42, color: "#0ea5e9" },
-  { label: "تشغيل", value: 31, color: "#22c55e" },
-  { label: "جودة", value: 17, color: "#f59e0b" },
-  { label: "مساندة", value: 10, color: "#6366f1" },
-];
-
-const monthlySeries = [42, 48, 45, 62, 66, 70, 84, 88, 92, 97, 101, 108];
-const baselineSeries = [38, 40, 39, 41, 44, 46, 47, 51, 55, 59, 60, 66];
 const monthLabels = ["ينا", "فبر", "مار", "أبر", "ماي", "يون", "يول", "أغس", "سبت", "أكت", "نوف", "ديس"];
 
-const basketProfitability = [
-  { label: "سلة مشاريع", share: 31, value: "56.4M", trend: "+8.2%" },
-  { label: "سلة تشغيل", share: 24, value: "42.8M", trend: "+5.1%" },
-  { label: "سلة جودة", share: 19, value: "33.1M", trend: "+3.7%" },
-  { label: "سلة تصاريح", share: 14, value: "24.6M", trend: "+2.3%" },
-  { label: "سلة ميدانية", share: 12, value: "20.2M", trend: "+1.9%" },
-];
-
-const monthlyWorkJourney = [
-  { key: "capture", label: "استقبال الطلبات", count: "148", color: "purple", hint: "يناير" },
-  { key: "planning", label: "التخطيط", count: "126", color: "orange", hint: "فبراير" },
-  { key: "execution", label: "التنفيذ", count: "172", color: "red", hint: "مارس" },
-  { key: "control", label: "التحقق والجودة", count: "139", color: "blue", hint: "أبريل" },
-  { key: "closure", label: "الإغلاق", count: "117", color: "green", hint: "مايو" },
-];
-
 export function ModuleHomePage({ onNavigate }: ModuleHomePageProps) {
+  const totalOrders = workOrders.length;
+  const activeOrders = workOrders.filter((item) => item.status !== "مكتمل").length;
+  const overdueOrders = workOrders.filter((item) => item.daysInBasket > item.slaDays).length;
+  const withinSlaRate = totalOrders === 0 ? 0 : Math.round(((totalOrders - overdueOrders) / totalOrders) * 100);
+  const totalOrderValue = workOrders.reduce((sum, item) => sum + item.value, 0);
+  const totalBaskets = baskets.length;
+  const totalVerificationItems = verificationItems.length;
+
+  const topKpis = [
+    { label: "إجمالي أوامر العمل", value: totalOrders.toString(), delta: `${activeOrders} نشط`, tone: "blue" },
+    { label: "متأخرة SLA", value: overdueOrders.toString(), delta: `${withinSlaRate}% ضمن SLA`, tone: "teal" },
+    { label: "قيمة أوامر العمل", value: `${Math.round(totalOrderValue / 1000)}K`, delta: "قيمة تقديرية", tone: "green" },
+    { label: "تعريفات السلال", value: totalBaskets.toString(), delta: `${totalVerificationItems} بند تحقق`, tone: "amber" },
+  ];
+
+  const sectionCounts = workOrders.reduce<Record<string, number>>((acc, item) => {
+    acc[item.section] = (acc[item.section] ?? 0) + 1;
+    return acc;
+  }, {});
+  const sectionPalette: Record<string, string> = {
+    مشاريع: "#0ea5e9",
+    تشغيل: "#22c55e",
+    جودة: "#f59e0b",
+    المساندة: "#6366f1",
+  };
+  const sectionShares = Object.entries(sectionCounts).map(([label, count]) => ({
+    label,
+    value: Math.round((count / totalOrders) * 100),
+    color: sectionPalette[label] ?? "#64748b",
+  }));
+
+  const basketSummary = baskets.map((basket) => {
+    const basketOrders = workOrders.filter((order) => order.currentBasket === basket.name);
+    const avgDays =
+      basketOrders.length === 0
+        ? 0
+        : Math.round(basketOrders.reduce((sum, order) => sum + order.daysInBasket, 0) / basketOrders.length);
+    return {
+      label: basket.name,
+      share: totalOrders === 0 ? 0 : Math.round((basketOrders.length / totalOrders) * 100),
+      value: `${basketOrders.length} أمر`,
+      trend: `SLA ${basket.slaDays} - متوسط ${avgDays} يوم`,
+    };
+  });
+
+  const monthlySeries = monthLabels.map((_, index) => {
+    const order = workOrders[index % workOrders.length];
+    return 40 + order.daysInBasket * 6;
+  });
+  const baselineSeries = monthLabels.map((_, index) => {
+    const order = workOrders[index % workOrders.length];
+    return 35 + order.slaDays * 4;
+  });
+
+  const stageSummary = stageDefinitions.slice(0, 5);
+  const monthlyWorkJourney = stageSummary.map((stage, index) => ({
+    key: stage.id,
+    label: stage.nameAr,
+    count: `${workOrders.filter((order) => order.currentBasket === stage.nameAr).length}`,
+    color: ["purple", "orange", "red", "blue", "green"][index],
+    hint: `SLA ${stage.slaDays}`,
+  }));
+
   return (
     <div className="generic-page module-home-v3">
       <section className="module-v3-kpi-grid">
@@ -68,7 +101,7 @@ export function ModuleHomePage({ onNavigate }: ModuleHomePageProps) {
           <h3>توزيع الأقسام</h3>
           <div className="module-v3-donut-wrap">
             <div className="module-v3-donut" aria-hidden="true">
-              <span>1.1B</span>
+                <span>{totalOrders}</span>
             </div>
             <div className="module-v3-legend">
               {sectionShares.map((item) => (
@@ -86,8 +119,8 @@ export function ModuleHomePage({ onNavigate }: ModuleHomePageProps) {
           <div className="module-v3-tree-grid">
             <div className="tree-a">
               <p>
-                <strong>{basketProfitability[0].label}</strong>
-                <small>{basketProfitability[0].share}%</small>
+                <strong>{basketSummary[0]?.label ?? "-"}</strong>
+                <small>{basketSummary[0]?.share ?? 0}%</small>
               </p>
               <div className="tree-mini-chart" aria-hidden="true">
                 <span style={{ height: "36%" }} />
@@ -100,31 +133,31 @@ export function ModuleHomePage({ onNavigate }: ModuleHomePageProps) {
             </div>
             <div className="tree-b">
               <p>
-                <strong>{basketProfitability[1].label}</strong>
-                <small>{basketProfitability[1].share}%</small>
+                <strong>{basketSummary[1]?.label ?? "-"}</strong>
+                <small>{basketSummary[1]?.share ?? 0}%</small>
               </p>
             </div>
             <div className="tree-c">
               <p>
-                <strong>{basketProfitability[2].label}</strong>
-                <small>{basketProfitability[2].share}%</small>
+                <strong>{basketSummary[2]?.label ?? "-"}</strong>
+                <small>{basketSummary[2]?.share ?? 0}%</small>
               </p>
             </div>
             <div className="tree-d">
               <p>
-                <strong>{basketProfitability[3].label}</strong>
-                <small>{basketProfitability[3].share}%</small>
+                <strong>{basketSummary[3]?.label ?? "-"}</strong>
+                <small>{basketSummary[3]?.share ?? 0}%</small>
               </p>
             </div>
             <div className="tree-e">
               <p>
-                <strong>{basketProfitability[4].label}</strong>
-                <small>{basketProfitability[4].share}%</small>
+                <strong>{basketSummary[4]?.label ?? "-"}</strong>
+                <small>{basketSummary[4]?.share ?? 0}%</small>
               </p>
             </div>
           </div>
           <div className="module-v3-tree-meta">
-            {basketProfitability.map((item) => (
+            {basketSummary.slice(0, 5).map((item) => (
               <div key={item.label} className="tree-meta-row">
                 <span>{item.label}</span>
                 <strong>{item.value}</strong>
